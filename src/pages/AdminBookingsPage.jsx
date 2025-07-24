@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { selectUser } from '../store/slices/authSlice'
 import { notifyWaitlist } from '../store/slices/waitlistSlice'
+import { adminAPI } from '../utils/api'
 import { 
   UsersIcon, 
   CalendarIcon, 
@@ -12,7 +13,6 @@ import {
   FunnelIcon,
   BellIcon
 } from '@heroicons/react/24/outline'
-import axios from 'axios'
 
 const AdminBookingsPage = () => {
   const dispatch = useDispatch()
@@ -26,22 +26,6 @@ const AdminBookingsPage = () => {
   const [statusFilter, setStatusFilter] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
 
-  // Create authenticated API instance
-  const authAPI = axios.create({
-    baseURL: 'http://localhost:8080',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  })
-
-  authAPI.interceptors.request.use((config) => {
-    const credentials = localStorage.getItem('authCredentials')
-    if (credentials) {
-      config.headers.Authorization = `Basic ${credentials}`
-    }
-    return config
-  })
-
   useEffect(() => {
     if (user?.id) {
       fetchAdminData()
@@ -52,20 +36,18 @@ const AdminBookingsPage = () => {
     try {
       setLoading(true)
       // First fetch admin events
-      const eventsResponse = await authAPI.get(`/admin/events?adminId=${user.id}`)
-      const adminEvents = eventsResponse.data?.data || []
+      const eventsResponse = await adminAPI.getAdminEvents(user.id)
+      const adminEvents = eventsResponse.data?.data || eventsResponse.data || []
       setEvents(adminEvents)
 
       // Then fetch bookings for each event
       const allBookings = []
       for (const event of adminEvents) {
         try {
-          const bookingsResponse = await authAPI.get(`/admin/event/${event.id}/bookings?adminId=${user.id}`)
-          const eventBookings = bookingsResponse.data?.data || []
-          allBookings.push(...eventBookings.map(booking => ({
-            ...booking,
-            event: event
-          })))
+          const bookingsResponse = await adminAPI.getEventBookings(event.id, user.id)
+          const eventBookings = bookingsResponse.data?.data || bookingsResponse.data || []
+          // No need to attach event object since booking already has eventTitle, eventId, etc.
+          allBookings.push(...eventBookings)
         } catch (error) {
           console.error(`Failed to fetch bookings for event ${event.id}:`, error)
         }
@@ -119,9 +101,9 @@ const AdminBookingsPage = () => {
     const matchesSearch = 
       booking.user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       booking.user?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      booking.event?.title?.toLowerCase().includes(searchTerm.toLowerCase())
+      booking.eventTitle?.toLowerCase().includes(searchTerm.toLowerCase())
     
-    const matchesEvent = selectedEvent === '' || booking.event?.id?.toString() === selectedEvent
+    const matchesEvent = selectedEvent === '' || booking.eventId?.toString() === selectedEvent
     const matchesStatus = statusFilter === '' || booking.status?.toUpperCase() === statusFilter.toUpperCase()
     
     return matchesSearch && matchesEvent && matchesStatus
@@ -411,14 +393,14 @@ const AdminBookingsPage = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm font-medium text-gray-900">
-                            {booking.event?.title}
+                            {booking.eventTitle}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {booking.event?.location}
+                            Event #{booking.eventId}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {booking.event?.date ? formatDate(booking.event.date) : 'N/A'}
+                          {booking.eventDate ? formatDate(booking.eventDate) : 'N/A'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {booking.numberOfSeats || 1}

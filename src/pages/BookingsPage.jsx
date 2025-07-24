@@ -39,20 +39,6 @@ const BookingsPage = () => {
     }
   }, [dispatch, user?.id])
 
-  // Debug booking IDs
-  useEffect(() => {
-    if (bookings.length > 0) {
-      console.log('Booking IDs:', bookings.map(b => ({ id: b.id, hasId: !!b.id })))
-      console.log(bookings)
-      const duplicateIds = bookings.filter((booking, index, arr) => 
-        arr.findIndex(b => b.id === booking.id) !== index
-      )
-      if (duplicateIds.length > 0) {
-        console.warn('Duplicate booking IDs found:', duplicateIds)
-      }
-    }
-  }, [bookings])
-
   // Fetch event details for each booking
   useEffect(() => {
     const fetchEventDetailsForBookings = async () => {
@@ -87,10 +73,10 @@ const BookingsPage = () => {
   }, [bookings, dispatch])
 
   const handleCancelBooking = async (booking) => {
-    setCancellingId(`${booking.eventId}-${booking.bookingdate}`)
+    setCancellingId(booking.id)
     try {
       await dispatch(cancelBooking({ 
-        eventId: booking.eventId, 
+        bookingId: booking.id, 
         userId: user.id 
       })).unwrap()
       setShowCancelModal(false)
@@ -146,7 +132,7 @@ const BookingsPage = () => {
   }
 
   const canCancelBooking = (booking) => {
-    return booking.status === 'Confirmed' && !isEventPast(booking.bookingdate)
+    return booking.status === 'Confirmed' && !isEventPast(`${booking.eventDate}T${booking.eventTime}`)
   }
 
   if (loading) {
@@ -186,9 +172,9 @@ const BookingsPage = () => {
       {/* Bookings List */}
       {bookings.length > 0 ? (
         <div className="space-y-4">
-          {bookings.map((booking, index) => (
+          {bookings.map((booking) => (
             <div
-              key={`booking-${booking.eventId}-${index}`}
+              key={`booking-${booking.id}`}
               className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200"
             >
               <div className="p-6">
@@ -215,12 +201,12 @@ const BookingsPage = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm text-gray-600">
                       <div className="flex items-center space-x-2">
                         <CalendarIcon className="h-4 w-4 flex-shrink-0" />
-                        <span>{formatDate(eventDetails[booking.eventId]?.date || booking.bookingdate)}</span>
+                        <span>{formatDate(booking.eventDate)}</span>
                       </div>
                       
                       <div className="flex items-center space-x-2">
                         <ClockIcon className="h-4 w-4 flex-shrink-0" />
-                        <span>{formatTime(eventDetails[booking.eventId]?.time || booking.bookingtime)}</span>
+                        <span>{formatTime(booking.eventTime)}</span>
                       </div>
                       
                       <div className="flex items-center space-x-2">
@@ -268,10 +254,10 @@ const BookingsPage = () => {
                     {canCancelBooking(booking) && (
                       <button
                         onClick={() => openCancelModal(booking)}
-                        disabled={cancellingId === `${booking.eventId}-${booking.bookingdate}`}
+                        disabled={cancellingId === booking.id}
                         className="inline-flex items-center justify-center px-3 py-2 border border-red-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {cancellingId === `${booking.eventId}-${booking.bookingdate}` ? (
+                        {cancellingId === booking.id ? (
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-700 mr-2"></div>
                         ) : (
                           <XMarkIcon className="h-4 w-4 mr-2" />
@@ -331,10 +317,10 @@ const BookingsPage = () => {
                   </button>
                   <button
                     onClick={() => handleCancelBooking(selectedBooking)}
-                    disabled={cancellingId === `${selectedBooking.eventId}-${selectedBooking.bookingdate}`}
+                    disabled={cancellingId === selectedBooking.id}
                     className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {cancellingId === `${selectedBooking.eventId}-${selectedBooking.bookingdate}` ? 'Cancelling...' : 'Cancel Booking'}
+                    {cancellingId === selectedBooking.id ? 'Cancelling...' : 'Cancel Booking'}
                   </button>
                 </div>
               </div>

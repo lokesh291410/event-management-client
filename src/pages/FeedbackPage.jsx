@@ -45,7 +45,7 @@ const FeedbackPage = () => {
   // Get attended events (confirmed bookings for past events)
   const attendedEvents = bookings.filter(booking => 
     booking.status === 'Confirmed' && 
-    new Date(booking.bookingdate) < new Date()
+    new Date(`${booking.eventDate}T${booking.eventTime}`) < new Date()
   )
 
   // Get events that haven't been reviewed yet
@@ -57,6 +57,17 @@ const FeedbackPage = () => {
     setFeedback(prev => ({ ...prev, rating }))
   }
 
+  const formatDate = (dateString) => {
+    if (!dateString) return ''
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'short', 
+      month: 'short', 
+      day: 'numeric',
+      year: 'numeric'
+    })
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!user?.id) return
@@ -65,12 +76,15 @@ const FeedbackPage = () => {
     setSubmitSuccess(false)
 
     try {
-      await dispatch(submitFeedback(user.id,{
-        eventId: feedback.eventId,
-        rating: feedback.rating,
-        comment: feedback.comment,
-        suggestions: feedback.suggestions,
-        wouldRecommend: feedback.wouldRecommend
+      await dispatch(submitFeedback({
+        userId: user.id,
+        feedbackData: {
+          eventId: feedback.eventId,
+          rating: feedback.rating,
+          comment: feedback.comment,
+          suggestions: feedback.suggestions,
+          wouldRecommend: feedback.wouldRecommend
+        }
       })).unwrap()
 
       // Reset form and show success
@@ -135,7 +149,7 @@ const FeedbackPage = () => {
               </option>
               {eventsToReview.map((booking) => (
                 <option key={booking.eventId} value={booking.eventId}>
-                  {booking.eventTitle} - {new Date(booking.bookingdate).toLocaleDateString()}
+                  {booking.eventTitle} - {formatDate(booking.eventDate)}
                 </option>
               ))}
             </select>
@@ -244,58 +258,58 @@ const FeedbackPage = () => {
           </div>
         ) : userFeedback.length > 0 ? (
           <div className="space-y-6">
-            {userFeedback.map((feedbackItem) => {
-              const relatedBooking = attendedEvents.find(booking => booking.eventId === feedbackItem.eventId)
-              return (
-                <div key={feedbackItem.id} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="font-medium text-gray-900">
-                        {relatedBooking?.eventTitle || `Event #${feedbackItem.eventId}`}
-                      </h3>
-                      <div className="flex items-center mt-1">
-                        <div className="flex">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <StarIconSolid
-                              key={star}
-                              className={`h-4 w-4 ${
-                                star <= feedbackItem.rating ? 'text-yellow-400' : 'text-gray-300'
-                              }`}
-                            />
-                          ))}
-                        </div>
-                        <span className="ml-2 text-sm text-gray-600">
-                          {feedbackItem.rating}/5 stars
-                        </span>
+            {userFeedback.map((feedbackItem) => (
+              <div key={feedbackItem.id} className="border border-gray-200 rounded-lg p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <h3 className="font-medium text-gray-900">
+                      {feedbackItem.eventTitle}
+                    </h3>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {new Date(feedbackItem.eventDate).toLocaleDateString()} • {feedbackItem.eventLocation}
+                    </p>
+                    <div className="flex items-center mt-2">
+                      <div className="flex">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <StarIconSolid
+                            key={star}
+                            className={`h-4 w-4 ${
+                              star <= feedbackItem.rating ? 'text-yellow-400' : 'text-gray-300'
+                            }`}
+                          />
+                        ))}
                       </div>
+                      <span className="ml-2 text-sm text-gray-600">
+                        {feedbackItem.rating}/5 stars
+                      </span>
                     </div>
-                    <span className="text-sm text-gray-500">
-                      {new Date(feedbackItem.createdAt || feedbackItem.submittedAt).toLocaleDateString()}
-                    </span>
                   </div>
-
-                  {feedbackItem.comment && (
-                    <div className="mb-3">
-                      <h4 className="text-sm font-medium text-gray-700 mb-1">Review:</h4>
-                      <p className="text-gray-600">{feedbackItem.comment}</p>
-                    </div>
-                  )}
-
-                  {feedbackItem.suggestions && (
-                    <div className="mb-3">
-                      <h4 className="text-sm font-medium text-gray-700 mb-1">Suggestions:</h4>
-                      <p className="text-gray-600">{feedbackItem.suggestions}</p>
-                    </div>
-                  )}
-
-                  <div className="flex items-center">
-                    <span className="text-sm text-gray-600">
-                      {feedbackItem.wouldRecommend ? '✓' : '✗'} Would recommend to others
-                    </span>
-                  </div>
+                  <span className="text-sm text-gray-500">
+                    Submitted: {new Date(feedbackItem.submittedAt).toLocaleDateString()}
+                  </span>
                 </div>
-              )
-            })}
+
+                {feedbackItem.comment && (
+                  <div className="mb-3">
+                    <h4 className="text-sm font-medium text-gray-700 mb-1">Review:</h4>
+                    <p className="text-gray-600">{feedbackItem.comment}</p>
+                  </div>
+                )}
+
+                {feedbackItem.suggestions && (
+                  <div className="mb-3">
+                    <h4 className="text-sm font-medium text-gray-700 mb-1">Suggestions:</h4>
+                    <p className="text-gray-600">{feedbackItem.suggestions}</p>
+                  </div>
+                )}
+
+                <div className="flex items-center">
+                  <span className="text-sm text-gray-600">
+                    {feedbackItem.wouldRecommend ? '✓' : '✗'} Would recommend to others
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
           <div className="text-center py-8">

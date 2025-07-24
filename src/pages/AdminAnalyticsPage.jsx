@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSelector } from 'react-redux'
 import { selectUser } from '../store/slices/authSlice'
+import { adminAPI } from '../utils/api'
 import { 
   ChartBarIcon, 
   CalendarIcon, 
@@ -9,7 +10,6 @@ import {
   ArrowTrendingDownIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline'
-import axios from 'axios'
 
 const AdminAnalyticsPage = () => {
   const user = useSelector(selectUser)
@@ -18,22 +18,6 @@ const AdminAnalyticsPage = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [selectedEvent, setSelectedEvent] = useState('')
-
-  // Create authenticated API instance
-  const authAPI = axios.create({
-    baseURL: 'http://localhost:8080',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  })
-
-  authAPI.interceptors.request.use((config) => {
-    const credentials = localStorage.getItem('authCredentials')
-    if (credentials) {
-      config.headers.Authorization = `Basic ${credentials}`
-    }
-    return config
-  })
 
   useEffect(() => {
     if (user?.id) {
@@ -45,18 +29,18 @@ const AdminAnalyticsPage = () => {
     try {
       setLoading(true)
       // Fetch admin events
-      const eventsResponse = await authAPI.get(`/admin/events?adminId=${user.id}`)
-      const adminEvents = eventsResponse.data?.data || []
+      const eventsResponse = await adminAPI.getAdminEvents(user.id)
+      const adminEvents = eventsResponse.data?.data || eventsResponse.data || []
       setEvents(adminEvents)
 
       // Fetch analytics for each event
       const eventAnalytics = {}
       for (const event of adminEvents) {
         try {
-          const statsResponse = await authAPI.get(`/admin/event/${event.id}/statistics?adminId=${user.id}`)
+          const statsResponse = await adminAPI.getEventStatistics(event.id, user.id)
           eventAnalytics[event.id] = {
             event: event,
-            stats: statsResponse.data?.data || {}
+            stats: statsResponse.data?.data || statsResponse.data || {}
           }
         } catch (error) {
           console.error(`Failed to fetch analytics for event ${event.id}:`, error)

@@ -33,14 +33,14 @@ const UserDashboard = () => {
 
   const recentEvents = events.slice(0, 4)
   const upcomingBookings = bookings.filter(booking => 
-    new Date(booking.event?.eventDate) > new Date()
+    new Date(`${booking.eventDate}T${booking.eventTime}`) > new Date()
   ).slice(0, 3)
 
   const stats = {
     totalBookings: bookings.length,
     upcomingEvents: upcomingBookings.length,
     completedEvents: bookings.filter(booking => 
-      new Date(booking.event?.eventDate) < new Date()
+      new Date(`${booking.eventDate}T${booking.eventTime}`) < new Date()
     ).length
   }
 
@@ -197,19 +197,19 @@ const UserDashboard = () => {
                 </div>
               ) : upcomingBookings.length > 0 ? (
                 <div className="space-y-4">
-                  {upcomingBookings.map((booking) => (
-                    <div key={booking.id} className="border border-gray-200 rounded-lg p-4">
+                  {upcomingBookings.map((booking, index) => (
+                    <div key={`${booking.eventId}-${index}`} className="border border-gray-200 rounded-lg p-4">
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
-                          <h4 className="font-medium text-gray-900">{booking.event?.title}</h4>
+                          <h4 className="font-medium text-gray-900">{booking.eventTitle}</h4>
                           <div className="mt-2 space-y-1 text-sm text-gray-600">
                             <div className="flex items-center space-x-2">
                               <CalendarIcon className="h-4 w-4" />
-                              <span>{formatDate(booking.event?.eventDate)}</span>
+                              <span>{formatDate(booking.eventDate)} at {formatTime(booking.eventTime)}</span>
                             </div>
                             <div className="flex items-center space-x-2">
-                              <MapPinIcon className="h-4 w-4" />
-                              <span>{booking.event?.location}</span>
+                              <TicketIcon className="h-4 w-4" />
+                              <span>{booking.numberOfSeats} seat(s) booked</span>
                             </div>
                           </div>
                         </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSelector } from 'react-redux'
 import { selectUser } from '../store/slices/authSlice'
+import { adminAPI } from '../utils/api'
 import { 
   ChatBubbleLeftRightIcon, 
   StarIcon,
@@ -10,7 +11,6 @@ import {
   MagnifyingGlassIcon
 } from '@heroicons/react/24/outline'
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid'
-import axios from 'axios'
 
 const AdminFeedbackPage = () => {
   const user = useSelector(selectUser)
@@ -22,22 +22,6 @@ const AdminFeedbackPage = () => {
   const [ratingFilter, setRatingFilter] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
 
-  // Create authenticated API instance
-  const authAPI = axios.create({
-    baseURL: 'http://localhost:8080',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  })
-
-  authAPI.interceptors.request.use((config) => {
-    const credentials = localStorage.getItem('authCredentials')
-    if (credentials) {
-      config.headers.Authorization = `Basic ${credentials}`
-    }
-    return config
-  })
-
   useEffect(() => {
     if (user?.id) {
       fetchFeedbackData()
@@ -48,16 +32,16 @@ const AdminFeedbackPage = () => {
     try {
       setLoading(true)
       // First fetch admin events
-      const eventsResponse = await authAPI.get(`/admin/events?adminId=${user.id}`)
-      const adminEvents = eventsResponse.data?.data || []
+      const eventsResponse = await adminAPI.getAdminEvents(user.id)
+      const adminEvents = eventsResponse.data?.data || eventsResponse.data || []
       setEvents(adminEvents)
 
       // Then fetch feedback for each event
       const allFeedback = []
       for (const event of adminEvents) {
         try {
-          const feedbackResponse = await authAPI.get(`/admin/event/${event.id}/feedback?adminId=${user.id}`)
-          const eventFeedback = feedbackResponse.data?.data || []
+          const feedbackResponse = await adminAPI.getEventFeedback(event.id, user.id)
+          const eventFeedback = feedbackResponse.data?.data || feedbackResponse.data || []
           allFeedback.push(...eventFeedback.map(fb => ({
             ...fb,
             event: event

@@ -21,12 +21,53 @@ export const signupUser = createAsyncThunk(
       })
       
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Signup failed')
+        // Check content type first to determine how to parse the response
+        const contentType = response.headers.get('content-type')
+        let errorMessage = 'Signup failed'
+        
+        try {
+          if (contentType && contentType.includes('application/json')) {
+            // Parse as JSON
+            const errorData = await response.json()
+            console.log('Error data from backend:', errorData) // Debug log
+            errorMessage = errorData.message || errorData.error || errorData.title || 'Signup failed'
+          } else {
+            // Parse as text
+            const errorText = await response.text()
+            console.log('Error text from backend:', errorText) // Debug log
+            errorMessage = errorText || response.statusText || 'Signup failed'
+          }
+          
+          console.log('Extracted error message:', errorMessage) // Debug log
+          
+        } catch (parseError) {
+          console.log('Response parsing failed:', parseError) // Debug log
+          // If parsing fails, use a generic message
+          errorMessage = '❌ Signup failed. Please check your information and try again.'
+        }
+        
+        // Make specific error messages more user-friendly (outside the try-catch)
+        if (errorMessage.toLowerCase().includes('email already exists')) {
+          errorMessage = '❌ This email address is already registered. Please use a different email or try logging in.'
+        } else if (errorMessage.toLowerCase().includes('username already exists')) {
+          errorMessage = '❌ This username is already taken. Please choose a different username.'
+        } else if (errorMessage.toLowerCase().includes('email')) {
+          errorMessage = '❌ There was an issue with your email address. Please check and try again.'
+        } else if (errorMessage.toLowerCase().includes('username')) {
+          errorMessage = '❌ There was an issue with your username. Please choose a different one.'
+        }
+        
+        throw new Error(errorMessage)
       }
       
-      const userData = await response.json()
-      return userData
+      const contentType = response.headers.get('content-type')
+      if (contentType && contentType.includes('application/json')) {
+        const userData = await response.json()
+        return userData
+      } else {
+        const message = await response.text()
+        return { success: true, message }
+      }
     } catch (error) {
       return rejectWithValue(error.message || 'Signup failed')
     }

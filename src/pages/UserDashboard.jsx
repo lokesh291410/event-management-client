@@ -45,25 +45,50 @@ const UserDashboard = () => {
   }
 
   const formatDate = (dateString) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'short', 
-      month: 'short', 
-      day: 'numeric',
-      year: 'numeric'
-    })
+    if (!dateString) return 'Date TBA'
+    try {
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) return 'Invalid Date'
+      return date.toLocaleDateString('en-US', { 
+        weekday: 'short', 
+        month: 'short', 
+        day: 'numeric',
+        year: 'numeric'
+      })
+    } catch (error) {
+      return 'Invalid Date'
+    }
   }
 
   const formatTime = (timeString) => {
-    if (!timeString) return ''
-    const [hours, minutes] = timeString.split(':')
-    const date = new Date()
-    date.setHours(parseInt(hours), parseInt(minutes))
-    return date.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit',
-      hour12: true 
-    })
+    if (!timeString) return 'Time TBA'
+    try {
+      const [hours, minutes] = timeString.split(':')
+      const date = new Date()
+      date.setHours(parseInt(hours), parseInt(minutes))
+      return date.toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit',
+        hour12: true 
+      })
+    } catch (error) {
+      return 'Time TBA'
+    }
+  }
+
+  const getEventDateTime = (event) => {
+    // For events from the events API, the date and time are combined in dateTime field
+    if (event.dateTime) {
+      const datetime = new Date(event.dateTime)
+      const eventDate = datetime.toISOString().split('T')[0] // Extract date part
+      const eventTime = datetime.toTimeString().split(' ')[0].substring(0, 5) // Extract time part (HH:MM)
+      return { eventDate, eventTime }
+    }
+    
+    // Fallback: try other possible field names
+    const eventDate = event.date || event.eventDate || event.startDate
+    const eventTime = event.time || event.eventTime || event.startTime
+    return { eventDate, eventTime }
   }
 
   return (
@@ -259,37 +284,40 @@ const UserDashboard = () => {
                 </div>
               ) : recentEvents.length > 0 ? (
                 <div className="space-y-4">
-                  {recentEvents.map((event) => (
-                    <Link
-                      key={event.id}
-                      to={`/events/${event.id}`}
-                      className="block border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h4 className="font-medium text-gray-900">{event.title}</h4>
-                          <div className="mt-2 space-y-1 text-sm text-gray-600">
-                            <div className="flex items-center space-x-2">
-                              <CalendarIcon className="h-4 w-4" />
-                              <span>{formatDate(event.eventDate)} at {formatTime(event.eventTime)}</span>
+                  {recentEvents.map((event) => {
+                    const { eventDate, eventTime } = getEventDateTime(event)
+                    return (
+                      <Link
+                        key={event.id}
+                        to={`/events/${event.id}`}
+                        className="block border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <h4 className="font-medium text-gray-900">{event.title}</h4>
+                            <div className="mt-2 space-y-1 text-sm text-gray-600">
+                              <div className="flex items-center space-x-2">
+                                <CalendarIcon className="h-4 w-4" />
+                                <span>{formatDate(eventDate)} at {formatTime(eventTime)}</span>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <MapPinIcon className="h-4 w-4" />
+                                <span>{event.location}</span>
+                              </div>
                             </div>
-                            <div className="flex items-center space-x-2">
-                              <MapPinIcon className="h-4 w-4" />
-                              <span>{event.location}</span>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-medium text-gray-900">
+                              {event.price > 0 ? `$${event.price}` : 'Free'}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {(event.totalSeats || event.capacity || 0) - (event.totalBookings || 0)} seats left
                             </div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-sm font-medium text-gray-900">
-                            {event.price > 0 ? `$${event.price}` : 'Free'}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {event.capacity - (event.totalBookings || 0)} seats left
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
+                      </Link>
+                    )
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-8">

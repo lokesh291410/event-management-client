@@ -105,7 +105,7 @@ export const searchEvents = createAsyncThunk(
   'events/search',
   async (keyword, { rejectWithValue }) => {
     try {
-      const response = await authAPI.get(`/user/events/search?keyword=${keyword}`)
+      const response = await publicAPI.get(`/events/published/search?keyword=${keyword}`)
       return response.data
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Search failed')
@@ -318,9 +318,24 @@ const eventsSlice = createSlice({
       .addCase(searchEvents.fulfilled, (state, action) => {
         state.searchLoading = false
         state.searchResults = action.payload
+        state.upcomingEvents = action.payload // Update the main events list for display
       })
       .addCase(searchEvents.rejected, (state, action) => {
         state.searchLoading = false
+        state.error = action.payload
+      })
+      
+      // Fetch events by category
+      .addCase(fetchEventsByCategory.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(fetchEventsByCategory.fulfilled, (state, action) => {
+        state.loading = false
+        state.upcomingEvents = action.payload // Update the main events list for display
+      })
+      .addCase(fetchEventsByCategory.rejected, (state, action) => {
+        state.loading = false
         state.error = action.payload
       })
       
